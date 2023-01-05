@@ -1,0 +1,37 @@
+# These are good ideas but fail when trying to build between 2 separate git repositories as docker can't build
+# outside it's context - i.e. asynq_cmds is the context and the build requires async to be added to the docker
+# container for build purposes.
+#
+FROM golang:1.15-alpine AS builder
+
+RUN /sbin/apk update && \
+	/sbin/apk --no-cache add ca-certificates git tzdata && \
+	/usr/sbin/update-ca-certificates
+
+RUN adduser -D -g '' client
+WORKDIR /home/client
+
+#COPY go.mod /home/client
+#COPY go.sum /home/client
+COPY ../asynq /home/async
+COPY kmclient    /home/cmds/client
+#COPY *.go   /home/client
+
+ARG VERSION
+
+RUN CGO_ENABLED=0 go build -a -tags netgo,osusergo \
+    -ldflags "-extldflags '-static' -s -w" \
+    -ldflags "-X main.version=$VERSION" -o client ./home/client/cmds
+
+FROM busybox:musl
+
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
+COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
+COPY --from=builder /etc/passwd /etc/passwd
+COPY --from=builder /home/client/client /home/client/client
+
+USER client
+WORKDIR /home/client
+#EXPOSE 8081
+
+ENTRYPOINT ["/home/client/client"]

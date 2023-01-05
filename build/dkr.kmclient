@@ -1,0 +1,10 @@
+FROM alpine:3.17.0
+
+RUN adduser -D -g '' client
+WORKDIR /home/client
+
+COPY kmclient    /home/client/kmclient
+
+USER client
+
+ENTRYPOINT ["home/client/client"]
