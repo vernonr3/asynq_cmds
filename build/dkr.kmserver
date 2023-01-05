@@ -1,0 +1,10 @@
+FROM alpine:3.17.0
+
+RUN adduser -D -g '' server
+WORKDIR /home/server
+
+COPY km_server    /home/server/server
+
+USER server
+
+ENTRYPOINT ["home/server/server"]
